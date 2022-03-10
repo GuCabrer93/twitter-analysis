@@ -9,5 +9,8 @@ streaming_client.
 '''
 
 from kafka import KafkaProducer
-producer = KafkaProducer(bootstrap_servers='0.0.0.0:9092')
+from json import dumps
+producer = KafkaProducer(bootstrap_servers='192.168.163.130:9092', api_version=(0,10),  value_serializer=lambda m: dumps(m).encode('utf-8'))
+
+#streamlit
 
