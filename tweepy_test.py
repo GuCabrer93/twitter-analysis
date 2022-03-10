@@ -23,10 +23,10 @@ def read_from_stream():
         def on_tweet(self, tweet):
             print(tweet.id)
             #print(tweet.text)
-            producer.send("my-tweets", value=tweet)
+            #producer.send("my-tweets", value=tweet)
 
     streaming_client = CustomInStream(bearer_token=bearer_token)
-    streaming_client.sample()
+    #streaming_client.sample()
 
 
 def create_stream_filters():
