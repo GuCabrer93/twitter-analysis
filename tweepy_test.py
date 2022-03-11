@@ -7,26 +7,25 @@ from json import dumps
 
 # Creating Constants
 bearer_token = "AAAAAAAAAAAAAAAAAAAAAORIaAEAAAAAl6GnXS7YGOeQdYa0uGwc8DMF40Q%3DLIM7DC8lSNbFmsVsgWYyJqYrl2iBCSsR3Z1uUqjJR8c2kONAG4"
-kafka_home = "192.168.163.130:9092"
+kafka_server = "192.168.163.130:6667"
 kafka_version = (0,10)
-
 
 
 def read_from_stream():
     
+    producer = KafkaProducer(bootstrap_servers=kafka_server, api_version=kafka_version,  value_serializer=lambda m: dumps(m).encode('utf-8'))
 
     class CustomInStream(StreamingClient):
         def on_tweet(self, tweet):
-            # Uncomment code below to test with kafka
+            print(tweet.id)
+            #print(tweet.text)
+            #print(tweet.created_at)
 
             # Please note that tweepy returns an object that needs to be serialized (i.e. converted to string) 
             # It must be encoded using utf-8 to handle non-ascii characters
-            producer = KafkaProducer(bootstrap_servers=kafka_home, api_version=kafka_version,  value_serializer=lambda m: dumps(m).encode('utf-8'))
-            producer.send("my-tweets", value=tweet) 
+            #producer.send("my-tweets", value=tweet) 
 
-            #print(tweet.id)
-            #print(tweet.text)
-            #print(tweet.created_at)
+            
 
 
     # Creating streaming client and authenticating using bearer token
@@ -54,7 +53,7 @@ def read_from_stream():
     streaming_client.filter(tweet_fields=tweet_fields)
 
     # To test without rules or custom fields
-    #streaming_client.sample()
+    # streaming_client.sample()
     
 
 
