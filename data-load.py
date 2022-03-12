@@ -1,59 +1,61 @@
-# Loading libraries
-from tweepy.streaming import Stream
-from tweepy import OAuth2BearerHandler, API, Client
+# Imported required libraries
+from tweepy import StreamingClient, StreamRule
 from kafka import KafkaProducer
-from json import dumps
+from jsons import dumps
+#streamlit
 
 
-
-
-    #producer = KafkaProducer( value_serializer=lambda m: dumps(m).encode('utf-8'), bootstrap_servers=['192.168.163.130:6667'])
-    #producer = KafkaProducer( value_serializer=lambda m: dumps(m).encode('utf-8'), bootstrap_servers=['http://192.168.163.130:6667'])
-
-#We need to find a way to create a topic in Kafka Horton works
-#producer = KafkaProducer(bootstrap_servers='192.168.163.130:9092')
-print("Hello, World!")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-'''
-auth = OAuth2BearerHandler(bearer_token)
-
-api = API(auth)
-
-public_tweets = api.home_timeline()
-for tweet in public_tweets:
-    print(tweet.text)
-'''
+# Creating Constants
 bearer_token = "AAAAAAAAAAAAAAAAAAAAAORIaAEAAAAAl6GnXS7YGOeQdYa0uGwc8DMF40Q%3DLIM7DC8lSNbFmsVsgWYyJqYrl2iBCSsR3Z1uUqjJR8c2kONAG4"
+kafka_server = "localhost:9092"
 
-streaming_client = Client(bearer_token=bearer_token)
-response = streaming_client.search_recent_tweets(query="lang:en Bratislava", max_results=10)
+def read_from_stream():
+    
+    producer = KafkaProducer(bootstrap_servers=kafka_server, value_serializer=lambda m: dumps(m).encode('utf-8'))
 
-print(response.meta)
+    class CustomInStream(StreamingClient):
+        def on_tweet(self, tweet):
+            print(tweet.id)
+            #print(tweet.text)
+            #print(tweet.created_at)
 
-tweets = response.data
+            # Please note that tweepy returns an object that needs to be serialized (i.e. converted to string) 
+            # It must be encoded using utf-8 to handle non-ascii characters
+            producer.send("my-tweets", value=tweet) 
 
-# Each Tweet object has default id and text fields
-for tweet in tweets:
-    print(tweet.id)
-    print(tweet.text)
+            
 
-print("Hello, World!")
 
+    # Creating streaming client and authenticating using bearer token
+    streaming_client = CustomInStream(bearer_token=bearer_token)
+
+
+    # Creating filtering rules
+    ruleTag = "my-rule-1"
+
+    ruleValue  = ""
+    ruleValue += "lang:en"
+    ruleValue += " -is:retweet"
+    ruleValue += " -has:media"
+    ruleValue += " Ukraine"
+
+    rule1 = StreamRule(value=ruleValue, tag=ruleTag)
+
+    streaming_client.add_rules(rule1, dry_run=False)
+
+    # Adding custom fields
+    tweet_fields = []
+    tweet_fields.append("created_at")
+
+    # Start reading
+    streaming_client.filter(tweet_fields=tweet_fields)
+
+    # To test without rules or custom fields
+    # streaming_client.sample()
+    
+
+
+
+# Main Program starts below
+read_from_stream()
 
