@@ -42,7 +42,7 @@ def read_from_stream():
     rule1 = StreamRule(value=ruleValue, tag=ruleTag)
 
     streaming_client.add_rules(rule1, dry_run=False)
-
+    
     # Adding custom fields
     tweet_fields = []
     tweet_fields.append("created_at")
