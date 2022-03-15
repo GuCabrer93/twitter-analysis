@@ -3,8 +3,10 @@
 # Code below needs to be run using spark compiler, located at $SPARK_HOME/bin/spark-submit
 # AND adding option --jars /path/to/
 from pyspark.streaming.kafka import KafkaUtils
-from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
+from pyspark import SparkContext
+
+from re import sub
 from json import loads
 
 
@@ -20,17 +22,54 @@ batchDuration = 5
 checkpointDirectory = "/home/user/Bureau/tmp"
 
 
+# Creating Spark Streaming Context from Kafka
 sc = SparkContext(master = "local[2]", appName = "My Twitter App")
 ssc = StreamingContext(sparkContext = sc, batchDuration = batchDuration)
 ssc.checkpoint(checkpointDirectory)
-
 kafkaStream = KafkaUtils.createDirectStream(ssc, my_topics, kafka_server)
 
 
-kafkaStream.map(lambda tweet: loads(tweet[1])['text'] ).pprint(5)
+####################  Data Cleaning Begins  ####################
+# Converting Json string into a dictionary, serialized object is a tuple with two fields
+result = kafkaStream.map( lambda my_string: loads(my_string[1]) )
 
+# Extracting text from dictionary
+result = result.map( lambda my_dict: my_dict['text'] )
 
+# Encoding into ascii (comment out this line if using other languages than English)
+result = result.map( lambda my_text: my_text.encode("ascii", errors="ignore").decode() )
 
+# Converting to lowercase
+result = result.map( lambda my_text: my_text.lower() )
+
+# Removing space-like symbols
+result = result.map( lambda my_text: my_text
+    .replace( '"'  ,' ')
+    .replace( "'"  ,' ')
+    .replace( "("  ,' ')
+    .replace( ")"  ,' ')
+    .replace( "["  ,' ')
+    .replace( "]"  ,' ')
+    .replace( "{"  ,' ')
+    .replace( "}"  ,' ')
+    .replace( "\\" ,' ')
+    .replace( "."  ,' ')
+    .replace( "?"  ," ")
+    .replace( ","  ," ")
+)
+
+# Removing undesired spaces
+result = result.map( lambda my_text: sub(pattern=r'\s+',repl=" ",string=my_text) )
+
+#Removing strings starting by #, @ or http
+# To be implemented
+#result = result.map( lambda my_text: sub(pattern=r'\s+',repl=" ",string=my_text) )
+
+# Removing undesired characters (i.e. all non-alphabetic characters)
+#result = result.map( lambda my_text: sub(pattern=r'[^a-z]',repl="",string=my_text) )
+
+# Uncomment this line to print first 10 results
+result.pprint(10)
 
 
 
