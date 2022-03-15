@@ -10,7 +10,6 @@ from re import sub
 from json import loads
 
 
-
 # Constant Definition
 my_topics = ["my-tweets"]
 kafka_server = {
@@ -29,6 +28,7 @@ ssc.checkpoint(checkpointDirectory)
 kafkaStream = KafkaUtils.createDirectStream(ssc, my_topics, kafka_server)
 
 
+
 ####################  Data Cleaning Begins  ####################
 # Converting Json string into a dictionary, serialized object is a tuple with two fields
 result = kafkaStream.map( lambda my_string: loads(my_string[1]) )
@@ -39,8 +39,25 @@ result = result.map( lambda my_dict: my_dict['text'] )
 # Encoding into ascii (comment out this line if using other languages than English)
 result = result.map( lambda my_text: my_text.encode("ascii", errors="ignore").decode() )
 
-# Converting to lowercase
-result = result.map( lambda my_text: my_text.lower() )
+result.map( lambda my_text: "gcg "+my_text+" gcg" ).pprint(20)
+
+# Removing strings starting by $, #, @ or http
+result = result.map( lambda my_text: sub(pattern=r'http(\S+)(\s+)',repl=" ",string=my_text) )
+result = result.map( lambda my_text: sub(pattern=r'http(\S+)$',repl="",string=my_text) )
+
+result = result.map( lambda my_text: sub(pattern=r'\@(\S+)(\s+)',repl=" ",string=my_text) )
+result = result.map( lambda my_text: sub(pattern=r'\@(\S+)$',repl="",string=my_text) )
+
+result = result.map( lambda my_text: sub(pattern=r'\#(\S+)(\s+)',repl=" ",string=my_text) )
+result = result.map( lambda my_text: sub(pattern=r'\#(\S+)$',repl="",string=my_text) )
+
+result = result.map( lambda my_text: sub(pattern=r'\$(\S+)(\s+)',repl=" ",string=my_text) )
+result = result.map( lambda my_text: sub(pattern=r'\$(\S+)$',repl="",string=my_text) )
+
+
+# Removing rt
+result = result.map( lambda my_text: sub(pattern=r'^RT',repl="",string=my_text) )
+
 
 # Removing space-like symbols
 result = result.map( lambda my_text: my_text
@@ -55,21 +72,50 @@ result = result.map( lambda my_text: my_text
     .replace( "\\" ,' ')
     .replace( "."  ,' ')
     .replace( "?"  ," ")
+    .replace( "!"  ," ")
     .replace( ","  ," ")
+    .replace( "#"  ," ")
+    .replace( "@"  ," ")
+    .replace( "$"  ," ")
 )
 
-# Removing undesired spaces
-result = result.map( lambda my_text: sub(pattern=r'\s+',repl=" ",string=my_text) )
 
-#Removing strings starting by #, @ or http
-# To be implemented
-#result = result.map( lambda my_text: sub(pattern=r'\s+',repl=" ",string=my_text) )
+# Removing undesired spaces
+result = result.map( lambda my_text: sub(pattern=r'\s+',repl=" ",string=my_text).strip() )
+
+
+# Converting to lowercase
+result = result.map( lambda my_text: my_text.lower() )
 
 # Removing undesired characters (i.e. all non-alphabetic characters)
 #result = result.map( lambda my_text: sub(pattern=r'[^a-z]',repl="",string=my_text) )
 
+####################  Data Cleaning Ends  ####################
+
 # Uncomment this line to print first 10 results
-result.pprint(10)
+result.map( lambda my_text: "gcg "+my_text+" gcg" ).pprint(20)
+
+
+
+
+print("Hello, World!")
+
+# Start processing
+ssc.start()
+ssc.awaitTermination()
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -97,12 +143,3 @@ print( type(hashtags_reduced) )
 
 #hashtags_sorted.foreachRDD(lambda rdd: rdd.foreach(insertHashtags)) 
 '''
-print("Hello, World!")
-
-# demarrage de la boucle de traitement des tweets 
-ssc.start()
-ssc.awaitTermination()
-
-
-
-print("Hello, World!!")
