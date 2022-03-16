@@ -15,7 +15,7 @@ my_topics = ["my-tweets"]
 kafka_server = {
     "metadata.broker.list": "localhost:9092"
     #, "startingOffsets":"earliest"
-    , "auto.offset.reset" : "smallest"
+    , "auto.offset.reset" : "smallest" # Please comment when processing real-time data
 }
 batchDuration = 5
 checkpointDirectory = "/home/user/Bureau/tmp"
@@ -39,20 +39,19 @@ result = result.map( lambda my_dict: my_dict['text'] )
 # Encoding into ascii (comment out this line if using other languages than English)
 result = result.map( lambda my_text: my_text.encode("ascii", errors="ignore").decode() )
 
-result.map( lambda my_text: "gcg "+my_text+" gcg" ).pprint(20)
 
 # Removing strings starting by $, #, @ or http
-result = result.map( lambda my_text: sub(pattern=r'http(\S+)(\s+)',repl=" ",string=my_text) )
-result = result.map( lambda my_text: sub(pattern=r'http(\S+)$',repl="",string=my_text) )
+result = result.map( lambda my_text: sub(pattern=r'http(\S+)(\s+)' ,repl=" " ,string=my_text) )
+result = result.map( lambda my_text: sub(pattern=r'http(\S+)$'     ,repl=""  ,string=my_text) )
 
-result = result.map( lambda my_text: sub(pattern=r'\@(\S+)(\s+)',repl=" ",string=my_text) )
-result = result.map( lambda my_text: sub(pattern=r'\@(\S+)$',repl="",string=my_text) )
+result = result.map( lambda my_text: sub(pattern=r'\@(\S+)(\s+)'   ,repl=" " ,string=my_text) )
+result = result.map( lambda my_text: sub(pattern=r'\@(\S+)$'       ,repl=""  ,string=my_text) )
 
-result = result.map( lambda my_text: sub(pattern=r'\#(\S+)(\s+)',repl=" ",string=my_text) )
-result = result.map( lambda my_text: sub(pattern=r'\#(\S+)$',repl="",string=my_text) )
+result = result.map( lambda my_text: sub(pattern=r'\#(\S+)(\s+)'   ,repl=" " ,string=my_text) )
+result = result.map( lambda my_text: sub(pattern=r'\#(\S+)$'       ,repl=""  ,string=my_text) )
 
-result = result.map( lambda my_text: sub(pattern=r'\$(\S+)(\s+)',repl=" ",string=my_text) )
-result = result.map( lambda my_text: sub(pattern=r'\$(\S+)$',repl="",string=my_text) )
+result = result.map( lambda my_text: sub(pattern=r'\$(\S+)(\s+)'   ,repl=" " ,string=my_text) )
+result = result.map( lambda my_text: sub(pattern=r'\$(\S+)$'       ,repl=""  ,string=my_text) )
 
 
 # Removing rt
@@ -61,8 +60,6 @@ result = result.map( lambda my_text: sub(pattern=r'^RT',repl="",string=my_text) 
 
 # Removing space-like symbols
 result = result.map( lambda my_text: my_text
-    .replace( '"'  ,' ')
-    .replace( "'"  ,' ')
     .replace( "("  ,' ')
     .replace( ")"  ,' ')
     .replace( "["  ,' ')
@@ -70,13 +67,18 @@ result = result.map( lambda my_text: my_text
     .replace( "{"  ,' ')
     .replace( "}"  ,' ')
     .replace( "\\" ,' ')
-    .replace( "."  ,' ')
-    .replace( "?"  ," ")
-    .replace( "!"  ," ")
-    .replace( ","  ," ")
+    .replace( "/" ,' ')
     .replace( "#"  ," ")
     .replace( "@"  ," ")
     .replace( "$"  ," ")
+    .replace( "?"  ," ")
+    .replace( "!"  ," ")
+    .replace( ":"  ,' ')
+    .replace( ";"  ,' ')
+    .replace( "."  ,' ')
+    .replace( ","  ," ")
+    .replace( '"'  ,' ')
+    .replace( "'"  ,' ')
 )
 
 
@@ -92,6 +94,11 @@ result = result.map( lambda my_text: my_text.lower() )
 
 ####################  Data Cleaning Ends  ####################
 
+
+####################  Classification Begins  ####################
+
+####################  Classification Ends  ####################
+
 # Uncomment this line to print first 10 results
 result.map( lambda my_text: "gcg "+my_text+" gcg" ).pprint(20)
 
@@ -103,6 +110,7 @@ print("Hello, World!")
 # Start processing
 ssc.start()
 ssc.awaitTermination()
+ssc.stop(stopGraceFully = True)
 
 
 
