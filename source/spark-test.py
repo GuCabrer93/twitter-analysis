@@ -8,22 +8,48 @@ from pyspark import SparkContext
 
 from re import sub
 from json import loads
+from emoji import get_emoji_regexp
+from textblob import TextBlob
 
+def remove_emoji(text):
+    return get_emoji_regexp().sub(u'', text)
+
+def get_sentiment(text):
+    sentiment = TextBlob(text).sentiment.polarity
+    neutral_threshold = 0.05
+    
+    if sentiment > neutral_threshold:
+        return ('count', (1, 0, 0, 1)) # positive
+    elif sentiment >= -neutral_threshold:
+        return ('count', (0, 1, 0, 1)) # neutral
+    else:
+        return ('count', (0, 0, 1, 1)) # negative
+
+def pack_and_send(time, reduced):
+    if not reduced.isEmpty():
+        (dummy,(pos, neutral, neg, total)) = reduced.first()
+
+        json_data = {'positive': pos, 'neutral': neutral, 'negative': neg, 'total': total}
+        #print(json_data)
+        #To be implemented
+        #response = requests.post(url, data=json_data) #Send to Kibana 
 
 # Constant Definition
 my_topics = ["my-tweets"]
 kafka_server = {
     "metadata.broker.list": "localhost:9092"
-    #, "startingOffsets":"earliest"
     , "auto.offset.reset" : "smallest" # Please comment when processing real-time data
 }
-batchDuration = 5
+
+batch_interval = 2
+window_length = 15*60
+sliding_interval = 6
 checkpointDirectory = "/home/user/Bureau/tmp"
 
 
 # Creating Spark Streaming Context from Kafka
 sc = SparkContext(master = "local[2]", appName = "My Twitter App")
-ssc = StreamingContext(sparkContext = sc, batchDuration = batchDuration)
+ssc = StreamingContext(sparkContext = sc, batchDuration = batch_interval)
 ssc.checkpoint(checkpointDirectory)
 kafkaStream = KafkaUtils.createDirectStream(ssc, my_topics, kafka_server)
 
@@ -37,7 +63,8 @@ result = kafkaStream.map( lambda my_string: loads(my_string[1]) )
 result = result.map( lambda my_dict: my_dict['text'] )
 
 # Encoding into ascii (comment out this line if using other languages than English)
-result = result.map( lambda my_text: my_text.encode("ascii", errors="ignore").decode() )
+#result = result.map( lambda my_text: my_text.encode("ascii", errors="ignore").decode() )
+result = result.map( lambda my_text: remove_emoji(my_text) )
 
 
 # Removing strings starting by $, #, @ or http
@@ -83,7 +110,7 @@ result = result.map( lambda my_text: my_text
 
 
 # Removing undesired spaces
-result = result.map( lambda my_text: sub(pattern=r'\s+',repl=" ",string=my_text).strip() )
+result = result.map( lambda my_text: sub(pattern=r'\s+', repl=" ", string=my_text).strip() )
 
 
 # Converting to lowercase
@@ -94,18 +121,34 @@ result = result.map( lambda my_text: my_text.lower() )
 
 ####################  Data Cleaning Ends  ####################
 
+# Uncomment this line to print first 10 results
+#result.map( lambda my_text: "gcg "+my_text+" gcg" ).pprint(20)
 
 ####################  Classification Begins  ####################
 
+classified = result.map( lambda my_text : get_sentiment(my_text) )
+
+#classified.pprint(10)
+
+
+classified = classified.reduceByKeyAndWindow(
+    func = lambda x,y : ( x[0]+y[0] , x[1]+y[1] , x[2]+y[2] , x[3]+y[3] )
+    , invFunc = None
+    , windowDuration = window_length
+    , slideDuration = sliding_interval
+)
+
+
+
+classified.foreachRDD(pack_and_send)
+
+
+
 ####################  Classification Ends  ####################
 
-# Uncomment this line to print first 10 results
-result.map( lambda my_text: "gcg "+my_text+" gcg" ).pprint(20)
 
 
 
-
-print("Hello, World!")
 
 # Start processing
 ssc.start()

@@ -46,7 +46,7 @@ def sendTweetsCounter(sentiments, url):
 
     sentiments.foreachRDD(takeAndSend)
     
- def getTweets(kvs, sliding_interval):
+def getTweets(kvs, sliding_interval):
     tweets_text = kvs.map(lambda x: json.loads(x)) \
                 .map(lambda json_object: (json_object["user"]["screen_name"], json_object["text"], json_object["user"]["followers_count"], json_object["id"])) \
                 .window(sliding_interval,sliding_interval) \
@@ -96,7 +96,7 @@ def getTopWords(tweets, window_length, sliding_interval):
     counts.pprint()
     return counts
     
- def getTopHashTags(tweets, window_length, sliding_interval):
+def getTopHashTags(tweets, window_length, sliding_interval):
     words = tweets.map(lambda line:re.sub(r'http\S+','',line[1])) \
                   .map(lambda line:re.sub(r'bit.ly/\S+','', line)) \
                   .map(lambda line:line.strip('[link]')) \
@@ -169,3 +169,4 @@ ssc.start()
 # Wait for termination
 ssc.awaitTermination()
 ssc.stop(stopGraceFully = True)
+
