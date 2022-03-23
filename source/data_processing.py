@@ -130,7 +130,7 @@ app_name = "My Twitter App"
 checkpointDirectory = "/home/user/Bureau/tmp"
 
 # Spark uses settings below for windowing and batch load, all values are in seconds by default
-batch_interval   = 10   
+batch_interval   = 60   
 window_length    = batch_interval * 1
 sliding_interval = batch_interval * 1
 
