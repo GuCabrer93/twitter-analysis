@@ -17,7 +17,6 @@ class CustomInStream(StreamingClient):
             # It must be encoded using utf-8 to handle non-ascii characters
             print(tweet.id)
             self.producer.send(self.kafka_topic, value=tweet) 
-            print( dumps(tweet) )
             
 
             #print(tweet.text)

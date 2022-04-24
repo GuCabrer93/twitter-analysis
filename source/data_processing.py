@@ -21,7 +21,6 @@ fr_blobbler = Blobber(pos_tagger=PatternTagger(), analyzer=PatternAnalyzer())
 
 # Using textblob to get sentiment from tweets
 def get_sentiment(text, language):
-
     neutral_threshold = 0.05
     
     if language == "fr":
@@ -43,9 +42,6 @@ def get_sentiment(text, language):
 # Format data so we can send it over to Elasticsearch
 def pack_and_send(time, reduced_data):
     if not reduced_data.isEmpty():
-
-        #(pos, neutral, neg, total) = reduced_data.first()
-        
         # Adding timestamp
         reduced_data = reduced_data.map( lambda line: (line[0], line[1], line[2], line[3], time) )
 
@@ -54,17 +50,11 @@ def pack_and_send(time, reduced_data):
         my_df = reduced_data.toDF(df_schema)
 
         #my_df.printSchema()
-        my_df.show()
+        #my_df.show()
 
         writer = my_df.write.format("org.elasticsearch.spark.sql").option("es.read.metadata", "true").option("es.nodes.wan.only","true").option("es.port","9200").option("es.net.ssl","false").option("es.nodes", "http://localhost").mode("Append")
-        #writer.save("test2") #The name of my future index
-        print('Done')
-
-        #print(json_data)
-        # Yet to implement code to send data over to Kibana
-        #response = requests.post(url, data=json_data) #Send to Kibana 
-
-
+        writer.save("elastic_tweets") #The name of my future index
+        print('Writting to Elasticsearch')
 
 
 # Defining function to remove emojis
@@ -147,7 +137,7 @@ sliding_interval = batch_interval * 2
 my_topics = ["mes-tweets"]
 kafka_server = {
     "metadata.broker.list": "localhost:9092"
-    , "auto.offset.reset" : "smallest" # Please comment when processing real-time data
+#    , "auto.offset.reset" : "smallest" # Please comment when processing real-time data
 }
 
 # Elasticsearch Setup
