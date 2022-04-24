@@ -13,14 +13,18 @@ class CustomInStream(StreamingClient):
             self.kafka_topic = kafka_topic
 
         def on_tweet(self, tweet):
+            # Please note that tweepy returns an object that needs to be serialized (i.e. converted to string) 
+            # It must be encoded using utf-8 to handle non-ascii characters
             print(tweet.id)
+            self.producer.send(self.kafka_topic, value=tweet) 
+            print( dumps(tweet) )
+            
+
             #print(tweet.text)
             #print(tweet.created_at)
             #print(tweet.lang)
 
-            # Please note that tweepy returns an object that needs to be serialized (i.e. converted to string) 
-            # It must be encoded using utf-8 to handle non-ascii characters
-            self.producer.send(self.kafka_topic, value=tweet) 
+            
 
 
 def recompile_rules(streaming_client):
@@ -35,12 +39,27 @@ def recompile_rules(streaming_client):
 
     # Creating filtering rules
     ruleTag = "my-rule-1"
-    ruleValue  = ""
-    ruleValue += "Ukraine"
-    ruleValue += " lang:en"
-    ruleValue += " -is:retweet"
-    ruleValue += " -has:media"
+    ruleValue = ""
 
+    ruleValue += "("
+    ruleValue += "covid"
+    ruleValue += " -is:retweet"
+    ruleValue += " -is:reply"
+    ruleValue += " -is:quote"
+    ruleValue += " -has:media"
+    ruleValue += " lang:en"
+    ruleValue += ")"
+
+    ruleValue += " OR ("
+    ruleValue += "covid"
+    ruleValue += " -is:retweet"
+    ruleValue += " -is:reply"
+    ruleValue += " -is:quote"
+    ruleValue += " -has:media"
+    ruleValue += " lang:fr"
+    ruleValue += ")"
+
+    
     # Adding new rules
     rule1 = StreamRule(value=ruleValue, tag=ruleTag)
     streaming_client.add_rules(rule1, dry_run=False)
@@ -57,7 +76,7 @@ reset_filtering_rules = False
 kafka_server  = ""
 kafka_server += "localhost"
 kafka_server += ":9092"
-kafka_topic   = "my-tweets"
+kafka_topic   = "mes-tweets"
 
 
 # Creating streaming client and authenticating using bearer token
@@ -72,11 +91,15 @@ tweet_fields = []
 tweet_fields.append("created_at")
 tweet_fields.append("lang")
 
+expansions = []
+expansions.append("referenced_tweets.id")
+expansions.append("author_id")
+
 # To test without rules or custom fields
 # streaming_client.sample()
 
 # Start reading
-streaming_client.filter(tweet_fields=tweet_fields)
+streaming_client.filter(tweet_fields=tweet_fields, expansions=expansions)
 
 ########################################  END MAIN FUNCTION  ########################################
 
